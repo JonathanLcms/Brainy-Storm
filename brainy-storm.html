@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brainy Storm</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-light: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 14px 24px;
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--panel-light);
+    }
+    .logo { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      background: var(--panel-light);
+      color: var(--text);
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #475569; }
+    .btn.primary { background: var(--accent); color: #0f172a; }
+    .btn.primary:hover { background: #7dd3fc; }
+    .btn.danger { background: var(--danger); }
+    .btn.danger:hover { background: #f87171; }
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 280px;
+      background: var(--panel);
+      border-right: 1px solid var(--panel-light);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar h2 { margin: 0; padding: 16px; font-size: 1rem; color: var(--muted); }
+    .project-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .project-item {
+      padding: 12px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .project-item:hover, .project-item.active {
+      background: var(--panel-light);
+      border-color: var(--accent);
+    }
+    .project-item small { color: var(--muted); display: block; }
+    .project-item .actions { display: flex; gap: 4px; opacity: 0; }
+    .project-item:hover .actions { opacity: 1; }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--panel-light);
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+    }
+    .tab.active { background: var(--panel); color: var(--text); }
+    .tab-content {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      display: none;
+    }
+    .tab-content.active { display: block; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-light);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--panel-light);
+      border-radius: 8px;
+      background: #0f172a;
+      color: var(--text);
+      font: inherit;
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    label { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 0.9rem; }
+    .flow-canvas {
+      width: 100%;
+      height: 600px;
+      background: #0b1120;
+      border: 1px solid var(--panel-light);
+      border-radius: 12px;
+      position: relative;
+      overflow: auto;
+      user-select: none;
+    }
+    .node {
+      position: absolute;
+      min-width: 140px;
+      padding: 10px 14px;
+      background: var(--panel);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      text-align: center;
+      cursor: grab;
+      z-index: 2;
+    }
+    .node:active { cursor: grabbing; }
+    .node.selected { border-color: var(--warning); box-shadow: 0 0 0 3px rgba(245,158,11,0.3); }
+    .node textarea {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      text-align: center;
+      resize: none;
+      min-height: 24px;
+      padding: 2px;
+    }
+    .node .delete {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--danger);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+      display: none;
+    }
+    .node:hover .delete, .node.selected .delete { display: block; }
+    .svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2000px;
+      height: 1500px;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .todo-list, .task-list { list-style: none; padding: 0; margin: 0; }
+    .todo-item, .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--panel-light);
+    }
+    .task-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .todo-item:last-child, .task-item:last-child { border-bottom: none; }
+    .todo-item input[type=checkbox] { width: auto; }
+    .todo-item span { flex: 1; }
+    .todo-item span.done { text-decoration: line-through; color: var(--muted); }
+    .todo-add, .task-add { display: flex; gap: 8px; margin-top: 12px; }
+    .todo-add input, .task-add input { flex: 1; }
+    .task-meta { flex: 1; }
+    .task-title { font-weight: 600; }
+    .task-desc { color: var(--muted); font-size: 0.9rem; }
+    .code-area, .docs-area { font-family: 'Fira Code', Consolas, monospace; min-height: 300px; }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: var(--panel);
+      padding: 24px;
+      border-radius: 12px;
+      width: 360px;
+      max-width: 90%;
+    }
+    .modal h3 { margin-top: 0; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Brainy Storm</div>
+    <button class="btn primary" id="newProjectBtn">+ New Project</button>
+  </header>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Projects</h2>
+      <div class="project-list" id="projectList"></div>
+    </aside>
+    <main class="main" id="mainArea">
+      <div class="empty-state" id="emptyState">
+        <h2>No project selected</h2>
+        <p>Create a new project or select one to start planning.</p>
+      </div>
+      <div class="hidden" id="projectWorkspace">
+        <div class="tabs">
+          <button class="tab active" data-tab="flow">Flow Chart</button>
+          <button class="tab" data-tab="todos">To-Do List</button>
+          <button class="tab" data-tab="tasks">Tasks</button>
+          <button class="tab" data-tab="docs">Docs</button>
+          <button class="tab" data-tab="code">Code Snippet</button>
+        </div>
+        <div class="tab-content active" id="flowTab">
+          <div class="panel">
+            <div class="toolbar">
+              <button class="btn primary" id="addNodeBtn">+ Add Node</button>
+              <button class="btn" id="connectBtn">Connect Selected</button>
+              <button class="btn danger" id="deleteNodeBtn">Delete Selected</button>
+              <button class="btn" id="clearFlowBtn">Clear Flow</button>
+            </div>
+            <div class="flow-canvas" id="flowCanvas">
+              <svg class="svg-layer" id="svgLayer"><g id="lines"></g></svg>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="todosTab">
+          <div class="panel">
+            <h3>To-Do List</h3>
+            <ul class="todo-list" id="todoList"></ul>
+            <div class="todo-add">
+              <input type="text" id="newTodo" placeholder="Add a task..." />
+              <button class="btn primary" id="addTodoBtn">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="tasksTab">
+          <div class="panel">
+            <h3>Tasks</h3>
+            <ul class="task-list" id="taskList"></ul>
+            <div class="task-add">
+              <input type="text" id="newTaskTitle" placeholder="Task title..." />
+              <button class="btn primary" id="addTaskBtn">Add</button>
+            </div>
+            <label for="newTaskDesc">Description</label>
+            <input type="text" id="newTaskDesc" placeholder="Task details..." />
+          </div>
+        </div>
+        <div class="tab-content" id="docsTab">
+          <div class="panel">
+            <h3>Docs</h3>
+            <p style="color:var(--muted)">Write a script, speech, or guide here. Saved automatically.</p>
+            <textarea class="docs-area" id="docsArea" placeholder="Write a script or speech guide..."></textarea>
+          </div>
+        </div>
+        <div class="tab-content" id="codeTab">
+          <div class="panel">
+            <h3>Project Code Snippet</h3>
+            <p style="color:var(--muted)">Use this code in any project. Saved automatically.</p>
+            <textarea class="code-area" id="codeArea" placeholder="Paste or write code here..."></textarea>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay hidden" id="projectModal">
+    <div class="modal">
+      <h3 id="modalTitle">New Project</h3>
+      <label for="projectName">Project Name</label>
+      <input type="text" id="projectName" placeholder="My cool idea" />
+      <div class="modal-actions">
+        <button class="btn" id="cancelProject">Cancel</button>
+        <button class="btn primary" id="saveProject">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'brainyStormProjects';
+    let projects = [];
+    let activeProjectId = null;
+    let editingProjectId = null;
+    let selectedNodeIds = [];
+    let draggingNode = null;
+    let dragOffset = { x: 0, y: 0 };
+
+    const els = {
+      projectList: document.getElementById('projectList'),
+      newProjectBtn: document.getElementById('newProjectBtn'),
+      emptyState: document.getElementById('emptyState'),
+      projectWorkspace: document.getElementById('projectWorkspace'),
+      tabs: document.querySelectorAll('.tab'),
+      tabContents: document.querySelectorAll('.tab-content'),
+      projectModal: document.getElementById('projectModal'),
+      modalTitle: document.getElementById('modalTitle'),
+      projectName: document.getElementById('projectName'),
+      saveProject: document.getElementById('saveProject'),
+      cancelProject: document.getElementById('cancelProject'),
+      flowCanvas: document.getElementById('flowCanvas'),
+      svgLayer: document.getElementById('svgLayer'),
+      linesGroup: document.getElementById('lines'),
+      addNodeBtn: document.getElementById('addNodeBtn'),
+      connectBtn: document.getElementById('connectBtn'),
+      deleteNodeBtn: document.getElementById('deleteNodeBtn'),
+      clearFlowBtn: document.getElementById('clearFlowBtn'),
+      todoList: document.getElementById('todoList'),
+      newTodo: document.getElementById('newTodo'),
+      addTodoBtn: document.getElementById('addTodoBtn'),
+      taskList: document.getElementById('taskList'),
+      newTaskTitle: document.getElementById('newTaskTitle'),
+      newTaskDesc: document.getElementById('newTaskDesc'),
+      addTaskBtn: document.getElementById('addTaskBtn'),
+      docsArea: document.getElementById('docsArea'),
+      codeArea: document.getElementById('codeArea')
+    };
+
+    function load() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      projects = saved ? JSON.parse(saved) : [];
+      projects.forEach(p => {
+        p.tasks = p.tasks || [];
+        p.docs = p.docs || '';
+      });
+      renderProjects();
+      if (projects.length > 0) setActiveProject(projects[0].id);
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    }
+
+    function getActive() {
+      return projects.find(p => p.id === activeProjectId);
+    }
+
+    function uuid() {
+      return 'p-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function nodeUuid() {
+      return 'n-' + Math.random().toString(36).slice(2);
+    }
+
+    function renderProjects() {
+      els.projectList.innerHTML = '';
+      projects.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'project-item' + (p.id === activeProjectId ? ' active' : '');
+        item.innerHTML = `
+          <div>
+            <strong>${escapeHtml(p.name)}</strong>
+            <small>${new Date(p.updated).toLocaleString()}</small>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" data-action="edit" data-id="${p.id}">Edit</button>
+            <button class="icon-btn" data-action="delete" data-id="${p.id}">x</button>
+          </div>
+        `;
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action]')) return;
+          setActiveProject(p.id);
+        });
+        const editBtn = item.querySelector('[data-action="edit"]');
+        editBtn.addEventListener('click', (e) => { e.stopPropagation(); openProjectModal(p.id); });
+        const delBtn = item.querySelector('[data-action="delete"]');
+        delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteProject(p.id); });
+        els.projectList.appendChild(item);
+      });
+    }
+
+    function setActiveProject(id) {
+      activeProjectId = id;
+      const p = getActive();
+      if (!p) {
+        els.emptyState.classList.remove('hidden');
+        els.projectWorkspace.classList.add('hidden');
+        return;
+      }
+      els.emptyState.classList.add('hidden');
+      els.projectWorkspace.classList.remove('hidden');
+      renderFlow();
+      renderTodos();
+      renderTasks();
+      els.docsArea.value = p.docs || '';
+      els.codeArea.value = p.code || '';
+      renderProjects();
+    }
+
+    function openProjectModal(id = null) {
+      editingProjectId = id;
+      if (id) {
+        const p = projects.find(x => x.id === id);
+        els.modalTitle.textContent = 'Edit Project';
+        els.projectName.value = p.name;
+      } else {
+        els.modalTitle.textContent = 'New Project';
+        els.projectName.value = '';
+      }
+      els.projectModal.classList.remove('hidden');
+      els.projectName.focus();
+    }
+
+    function closeProjectModal() {
+      els.projectModal.classList.add('hidden');
+      editingProjectId = null;
+    }
+
+    function saveProject() {
+      const name = els.projectName.value.trim();
+      if (!name) return;
+      if (editingProjectId) {
+        const p = projects.find(x => x.id === editingProjectId);
+        p.name = name;
+        p.updated = Date.now();
+      } else {
+        const newP = {
+          id: uuid(),
+          name,
+          created: Date.now(),
+          updated: Date.now(),
+          nodes: [{ id: nodeUuid(), x: 50, y: 50, text: 'Start' }],
+          edges: [],
+          todos: [],
+          tasks: [],
+          docs: '',
+          code: ''
+        };
+        projects.push(newP);
+        activeProjectId = newP.id;
+      }
+      save();
+      renderProjects();
+      setActiveProject(activeProjectId);
+      closeProjectModal();
+    }
+
+    function deleteProject(id) {
+      if (!confirm('Delete this project?')) return;
+      projects = projects.filter(p => p.id !== id);
+      if (activeProjectId === id) activeProjectId = projects[0]?.id || null;
+      save();
+      setActiveProject(activeProjectId);
+    }
+
+    function renderFlow() {
+      const p = getActive();
+      if (!p) return;
+      els.flowCanvas.querySelectorAll('.node').forEach(n => n.remove());
+      p.nodes.forEach(n => createNodeEl(n));
+      drawEdges();
+    }
+
+    function createNodeEl(node) {
+      const el = document.createElement('div');
+      el.className = 'node' + (selectedNodeIds.includes(node.id) ? ' selected' : '');
+      el.id = node.id;
+      el.style.left = node.x + 'px';
+      el.style.top = node.y + 'px';
+      el.innerHTML = `<textarea rows="1">${escapeHtml(node.text)}</textarea><button class="delete">x</button>`;
+      const ta = el.querySelector('textarea');
+      ta.addEventListener('input', () => {
+        const p = getActive();
+        p.nodes.find(n => n.id === node.id).text = ta.value;
+        p.updated = Date.now();
+        save();
+      });
+      ta.addEventListener('mousedown', e => e.stopPropagation());
+      ta.addEventListener('click', e => e.stopPropagation());
+      el.querySelector('.delete').addEventListener('click', (e) => { e.stopPropagation(); deleteNode(node.id); });
+      el.addEventListener('mousedown', (e) => startDrag(e, node));
+      el.addEventListener('click', (e) => selectNode(e, node.id));
+      els.flowCanvas.appendChild(el);
+    }
+
+    function startDrag(e, node) {
+      if (e.target.tagName === 'TEXTAREA') return;
+      draggingNode = node;
+      const el = document.getElementById(node.id);
+      dragOffset.x = e.clientX - el.offsetLeft;
+      dragOffset.y = e.clientY - el.offsetTop;
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+    }
+
+    function onDrag(e) {
+      if (!draggingNode) return;
+      const p = getActive();
+      const node = p.nodes.find(n => n.id === draggingNode.id);
+      if (!node) return;
+      const el = document.getElementById(node.id);
+      node.x = Math.max(0, e.clientX - dragOffset.x);
+      node.y = Math.max(0, e.clientY - dragOffset.y);
+      el.style.left = node.x + 'px';
+      el.style.top = node.y + 'px';
+      resolveCollisions(node, el);
+      el.style.left = node.x + 'px';
+      el.style.top = node.y + 'px';
+      drawEdges();
+    }
+
+    function stopDrag() {
+      if (draggingNode) {
+        getActive().updated = Date.now();
+        save();
+      }
+      draggingNode = null;
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    }
+
+    function selectNode(e, id) {
+      if (e.target.tagName === 'TEXTAREA' || e.target.classList.contains('delete')) return;
+      if (e.shiftKey) {
+        if (selectedNodeIds.includes(id)) {
+          selectedNodeIds = selectedNodeIds.filter(x => x !== id);
+        } else {
+          selectedNodeIds.push(id);
+        }
+      } else {
+        if (selectedNodeIds.length === 1 && selectedNodeIds[0] === id) {
+          selectedNodeIds = [];
+        } else {
+          selectedNodeIds = [id];
+        }
+      }
+      updateSelectionVisuals();
+    }
+
+    function updateSelectionVisuals() {
+      const p = getActive();
+      if (!p) return;
+      p.nodes.forEach(n => {
+        const el = document.getElementById(n.id);
+        if (el) el.classList.toggle('selected', selectedNodeIds.includes(n.id));
+      });
+    }
+
+    function nodeRect(n, el) {
+      return { x: n.x, y: n.y, w: el.offsetWidth, h: el.offsetHeight };
+    }
+
+    function overlaps(r1, r2) {
+      const pad = 6;
+      return r1.x < r2.x + r2.w + pad &&
+             r1.x + r1.w + pad > r2.x &&
+             r1.y < r2.y + r2.h + pad &&
+             r1.y + r1.h + pad > r2.y;
+    }
+
+    function resolveCollisions(activeNode, activeEl) {
+      const p = getActive();
+      if (!p) return;
+      const others = p.nodes.filter(n => n.id !== activeNode.id);
+      for (let i = 0; i < 20; i++) {
+        const r1 = nodeRect(activeNode, activeEl);
+        let hit = null;
+        for (const n of others) {
+          const otherEl = document.getElementById(n.id);
+          if (!otherEl) continue;
+          const r2 = nodeRect(n, otherEl);
+          if (overlaps(r1, r2)) { hit = { n, r2 }; break; }
+        }
+        if (!hit) break;
+        const r2 = hit.r2;
+        const overlapX = Math.min(r1.x + r1.w - r2.x, r2.x + r2.w - r1.x);
+        const overlapY = Math.min(r1.y + r1.h - r2.y, r2.y + r2.h - r1.y);
+        if (overlapX < overlapY) {
+          const moveRight = (r1.x + r1.w / 2) >= (r2.x + r2.w / 2);
+          activeNode.x = moveRight ? r2.x + r2.w + 6 : r2.x - r1.w - 6;
+          if (activeNode.x < 0) activeNode.x = r2.x + r2.w + 6;
+        } else {
+          const moveDown = (r1.y + r1.h / 2) >= (r2.y + r2.h / 2);
+          activeNode.y = moveDown ? r2.y + r2.h + 6 : r2.y - r1.h - 6;
+          if (activeNode.y < 0) activeNode.y = r2.y + r2.h + 6;
+        }
+      }
+    }
+
+    function findFreePosition(node, activeEl) {
+      const p = getActive();
+      if (!p) return;
+      const others = p.nodes.filter(n => n.id !== node.id);
+      let moved = false;
+      for (let i = 0; i < 40; i++) {
+        const r1 = nodeRect(node, activeEl);
+        let hit = null;
+        for (const n of others) {
+          const otherEl = document.getElementById(n.id);
+          if (!otherEl) continue;
+          const r2 = nodeRect(n, otherEl);
+          if (overlaps(r1, r2)) { hit = { n, r2 }; break; }
+        }
+        if (!hit) break;
+        moved = true;
+        const r2 = hit.r2;
+        node.x = r2.x + r2.w + 6;
+        if (node.x + activeEl.offsetWidth > 1900) {
+          node.x = 20;
+          node.y += 60;
+        }
+      }
+      if (moved && (node.y + activeEl.offsetHeight > 1400)) node.y = 20;
+    }
+
+    function addNode() {
+      const p = getActive();
+      if (!p) return;
+      const n = { id: nodeUuid(), x: 100 + Math.random() * 120, y: 100 + Math.random() * 80, text: 'New Node' };
+      p.nodes.push(n);
+      p.updated = Date.now();
+      save();
+      createNodeEl(n);
+      const el = document.getElementById(n.id);
+      findFreePosition(n, el);
+      el.style.left = n.x + 'px';
+      el.style.top = n.y + 'px';
+      drawEdges();
+    }
+
+    function deleteNode(id) {
+      const p = getActive();
+      p.nodes = p.nodes.filter(n => n.id !== id);
+      p.edges = p.edges.filter(e => e.from !== id && e.to !== id);
+      p.updated = Date.now();
+      save();
+      renderFlow();
+    }
+
+    function connectSelected() {
+      if (selectedNodeIds.length !== 2) return alert('Select exactly 2 nodes (Shift-click to multi-select).');
+      const p = getActive();
+      const [from, to] = selectedNodeIds;
+      const exists = p.edges.some(e => e.from === from && e.to === to);
+      if (!exists) p.edges.push({ from, to });
+      p.updated = Date.now();
+      save();
+      selectedNodeIds = [];
+      renderFlow();
+    }
+
+    function deleteSelected() {
+      selectedNodeIds.forEach(id => deleteNode(id));
+      selectedNodeIds = [];
+    }
+
+    function clearFlow() {
+      const p = getActive();
+      if (!confirm('Clear the entire flow chart?')) return;
+      p.nodes = [{ id: nodeUuid(), x: 50, y: 50, text: 'Start' }];
+      p.edges = [];
+      p.updated = Date.now();
+      save();
+      renderFlow();
+    }
+
+    function drawEdges() {
+      const p = getActive();
+      if (!p) return;
+      els.linesGroup.innerHTML = '';
+      p.edges.forEach(edge => {
+        const fromEl = document.getElementById(edge.from);
+        const toEl = document.getElementById(edge.to);
+        if (!fromEl || !toEl) return;
+        const x1 = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+        const y1 = fromEl.offsetTop + fromEl.offsetHeight / 2;
+        const x2 = toEl.offsetLeft + toEl.offsetWidth / 2;
+        const y2 = toEl.offsetTop + toEl.offsetHeight / 2;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', 'var(--accent)');
+        line.setAttribute('stroke-width', '2');
+        els.linesGroup.appendChild(line);
+      });
+    }
+
+    function renderTodos() {
+      const p = getActive();
+      if (!p) return;
+      els.todoList.innerHTML = '';
+      p.todos.forEach((t, idx) => {
+        const li = document.createElement('li');
+        li.className = 'todo-item';
+        li.innerHTML = `
+          <input type="checkbox" ${t.done ? 'checked' : ''} data-idx="${idx}" />
+          <span class="${t.done ? 'done' : ''}">${escapeHtml(t.text)}</span>
+          <button class="icon-btn" data-idx="${idx}">x</button>
+        `;
+        li.querySelector('input').addEventListener('change', () => toggleTodo(idx));
+        li.querySelector('button').addEventListener('click', () => deleteTodo(idx));
+        els.todoList.appendChild(li);
+      });
+    }
+
+    function addTodo() {
+      const text = els.newTodo.value.trim();
+      if (!text) return;
+      const p = getActive();
+      p.todos.push({ text, done: false });
+      p.updated = Date.now();
+      save();
+      els.newTodo.value = '';
+      renderTodos();
+    }
+
+    function toggleTodo(idx) {
+      const p = getActive();
+      p.todos[idx].done = !p.todos[idx].done;
+      p.updated = Date.now();
+      save();
+      renderTodos();
+    }
+
+    function deleteTodo(idx) {
+      const p = getActive();
+      p.todos.splice(idx, 1);
+      p.updated = Date.now();
+      save();
+      renderTodos();
+    }
+
+    function renderTasks() {
+      const p = getActive();
+      if (!p) return;
+      els.taskList.innerHTML = '';
+      p.tasks.forEach((t, idx) => {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.innerHTML = `
+          <div class="task-meta">
+            <div class="task-title">${escapeHtml(t.title || '')}</div>
+            ${t.description ? `<div class="task-desc">${escapeHtml(t.description)}</div>` : ''}
+          </div>
+          <button class="icon-btn" data-idx="${idx}">x</button>
+        `;
+        li.querySelector('button').addEventListener('click', () => deleteTask(idx));
+        els.taskList.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const title = els.newTaskTitle.value.trim();
+      if (!title) return;
+      const p = getActive();
+      p.tasks.push({ title, description: els.newTaskDesc.value.trim() });
+      p.updated = Date.now();
+      save();
+      els.newTaskTitle.value = '';
+      els.newTaskDesc.value = '';
+      renderTasks();
+    }
+
+    function deleteTask(idx) {
+      const p = getActive();
+      p.tasks.splice(idx, 1);
+      p.updated = Date.now();
+      save();
+      renderTasks();
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    els.newProjectBtn.addEventListener('click', () => openProjectModal());
+    els.saveProject.addEventListener('click', saveProject);
+    els.cancelProject.addEventListener('click', closeProjectModal);
+    els.projectName.addEventListener('keydown', e => { if (e.key === 'Enter') saveProject(); });
+    els.projectModal.addEventListener('click', e => { if (e.target === els.projectModal) closeProjectModal(); });
+
+    els.tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        els.tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        els.tabContents.forEach(c => c.classList.remove('active'));
+        document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+      });
+    });
+
+    els.addNodeBtn.addEventListener('click', addNode);
+    els.connectBtn.addEventListener('click', connectSelected);
+    els.deleteNodeBtn.addEventListener('click', deleteSelected);
+    els.clearFlowBtn.addEventListener('click', clearFlow);
+    els.addTodoBtn.addEventListener('click', addTodo);
+    els.newTodo.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    els.addTaskBtn.addEventListener('click', addTask);
+    els.newTaskTitle.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+    els.newTaskDesc.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+    els.docsArea.addEventListener('input', () => {
+      const p = getActive();
+      if (!p) return;
+      p.docs = els.docsArea.value;
+      p.updated = Date.now();
+      save();
+    });
+    els.codeArea.addEventListener('input', () => {
+      const p = getActive();
+      if (!p) return;
+      p.code = els.codeArea.value;
+      p.updated = Date.now();
+      save();
+    });
+
+    window.addEventListener('resize', drawEdges);
+    load();
+  </script>
+</body>
+</html>
